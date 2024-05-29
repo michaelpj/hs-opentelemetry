@@ -52,6 +52,8 @@ packages:
 - instrumentation/postgresql-simple
 - instrumentation/yesod
 - instrumentation/wai
+- utils/exceptions
+- utils/sqlcommenter
 - examples/hspec
 - examples/yesod-minimal
 
