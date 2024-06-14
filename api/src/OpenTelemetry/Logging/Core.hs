@@ -77,7 +77,7 @@ data LoggerProviderOptions = LoggerProviderOptions
 
 {- | Options for creating a @LoggerProvider@ with no resources and default limits.
 
- In effect, logging is a no-op when using this configuration.
+ In effect, logging is a no-op when using this configuration and no-op Processors.
 -}
 emptyLoggerProviderOptions :: LoggerProviderOptions
 emptyLoggerProviderOptions =
@@ -100,8 +100,12 @@ createLoggerProvider ps LoggerProviderOptions {..} =
     }
 
 
+-- | Logging is no-op when using this @LoggerProvider@ because it has no processors and empty options.
+noOpLoggerProvider = createLoggerProvider [] emptyLoggerProviderOptions
+
+
 globalLoggerProvider :: IORef (LoggerProvider body)
-globalLoggerProvider = unsafePerformIO $ newIORef $ createLoggerProvider [] emptyLoggerProviderOptions
+globalLoggerProvider = unsafePerformIO $ newIORef noOpLoggerProvider
 {-# NOINLINE globalLoggerProvider #-}
 
 
