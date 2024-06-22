@@ -91,7 +91,7 @@ emptyLoggerProviderOptions =
 
  You should generally use @getGlobalLoggerProvider@ for most applications.
 -}
-createLoggerProvider :: [LogRecordProcessor body] -> LoggerProviderOptions -> (LoggerProvider body)
+createLoggerProvider :: [LogRecordProcessor body] -> LoggerProviderOptions -> LoggerProvider body
 createLoggerProvider ps LoggerProviderOptions {..} =
   LoggerProvider
     { loggerProviderProcessors = V.fromList ps

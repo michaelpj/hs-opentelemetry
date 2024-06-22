@@ -7,7 +7,6 @@ import qualified Data.HashMap.Strict as H
 import Data.IORef
 import qualified OpenTelemetry.Attributes as A
 import OpenTelemetry.Internal.Logging.Types
-import OpenTelemetry.Internal.Logging.Types (LoggerProvider (loggerProviderProcessors))
 import qualified OpenTelemetry.LogAttributes as LA
 import OpenTelemetry.Logging.Core
 import OpenTelemetry.Resource
