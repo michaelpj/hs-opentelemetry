@@ -16,7 +16,9 @@ module OpenTelemetry.Logging.Core (
   makeLogger,
 
   -- * @LogRecord@ operations
-  LogRecord (..),
+  LogRecord,
+  ReadableLogRecord (..),
+  ReadWriteLogRecord (..),
   LogRecordArguments (..),
   SeverityNumber (..),
   toShortName,
@@ -193,8 +195,7 @@ emitLogRecord
   -> m (LogRecord body)
 emitLogRecord l args = do
   ilr <- createImmutableLogRecord l args
-  lr <- liftIO $ newIORef ilr
-  pure $ LogRecord lr
+  liftIO $ mkLogRecord ilr
 
 
 {- | Add an attribute to a @LogRecord@.
@@ -215,10 +216,10 @@ For example, the 'otel.library.name' attribute is used to record the instrumenta
 
 Any additions to the 'otel.*' namespace MUST be approved as part of OpenTelemetry specification.
 -}
-addAttribute :: (MonadIO m, ToValue a) => LogRecord body -> Text -> a -> m ()
-addAttribute (LogRecord lr) k v =
+addAttribute :: (ReadWriteLogRecord r, MonadIO m, ToValue a) => r body -> Text -> a -> m ()
+addAttribute lr k v =
   liftIO $
-    modifyIORef'
+    modifyLogRecord
       lr
       ( \ilr@ImmutableLogRecord {logRecordAttributes, logRecordLogger} ->
           ilr
@@ -236,10 +237,10 @@ addAttribute (LogRecord lr) k v =
 
  This function may be slightly more performant than repeatedly calling 'addAttribute'.
 -}
-addAttributes :: (MonadIO m, ToValue a) => LogRecord body -> HashMap Text a -> m ()
-addAttributes (LogRecord lr) attrs =
+addAttributes :: (ReadWriteLogRecord r, MonadIO m, ToValue a) => r body -> HashMap Text a -> m ()
+addAttributes lr attrs =
   liftIO $
-    modifyIORef'
+    modifyLogRecord
       lr
       ( \ilr@ImmutableLogRecord {logRecordAttributes, logRecordLogger} ->
           ilr
@@ -256,5 +257,5 @@ addAttributes (LogRecord lr) attrs =
  using it to copy / otherwise use the data to further enrich
  instrumentation.
 -}
-logRecordGetAttributes :: (MonadIO m) => LogRecord a -> m LogAttributes
-logRecordGetAttributes (LogRecord lr) = liftIO $ logRecordAttributes <$> readIORef lr
+logRecordGetAttributes :: (ReadableLogRecord r, MonadIO m) => r a -> m LogAttributes
+logRecordGetAttributes lr = liftIO $ logRecordAttributes <$> readLogRecord lr
