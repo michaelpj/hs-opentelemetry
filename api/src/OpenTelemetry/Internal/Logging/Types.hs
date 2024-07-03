@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module OpenTelemetry.Internal.Logging.Types (
+  LogRecordProcessor (..),
   LoggerProvider (..),
   Logger (..),
   LogRecord,
@@ -16,37 +17,72 @@ module OpenTelemetry.Internal.Logging.Types (
   toShortName,
 ) where
 
+import Control.Concurrent.Async
 import Data.Function (on)
 import qualified Data.HashMap.Strict as H
 import Data.IORef (IORef, atomicModifyIORef, modifyIORef, newIORef, readIORef)
 import Data.Text (Text)
+import Data.Vector (Vector)
 import OpenTelemetry.Common (Timestamp, TraceFlags)
 import OpenTelemetry.Context.Types (Context)
-import OpenTelemetry.Internal.Common.Types (InstrumentationLibrary)
+import OpenTelemetry.Internal.Common.Types (InstrumentationLibrary, ShutdownResult)
 import OpenTelemetry.Internal.Trace.Id (SpanId, TraceId)
 import OpenTelemetry.LogAttributes
 import OpenTelemetry.Resource (MaterializedResources)
 
 
+data LogRecordProcessor body = LogRecordProcessor
+  { logRecordProcessorOnEmit :: LogRecord body -> Context -> IO ()
+  -- ^ Called when a LogRecord is emitted. This method is called synchronously on the thread that emitted the LogRecord, therefore it SHOULD NOT block or throw exceptions.
+  --
+  -- A LogRecordProcessor may freely modify logRecord for the duration of the OnEmit call. If logRecord is needed after OnEmit returns (i.e. for asynchronous processing) only reads are permitted.
+  , logRecordProcessorShutdown :: IO (Async ShutdownResult)
+  -- ^ Shuts down the processor. Called when SDK is shut down. This is an opportunity for processor to do any cleanup required.
+  --
+  -- Shutdown SHOULD be called only once for each LogRecordProcessor instance. After the call to Shutdown, subsequent calls to OnEmit are not allowed. SDKs SHOULD ignore these calls gracefully, if possible.
+  --
+  -- Shutdown SHOULD provide a way to let the caller know whether it succeeded, failed or timed out.
+  --
+  -- Shutdown MUST include the effects of ForceFlush.
+  --
+  -- Shutdown SHOULD complete or abort within some timeout. Shutdown can be implemented as a blocking API or an asynchronous API which notifies the caller via a callback or an event.
+  -- OpenTelemetry SDK authors can decide if they want to make the shutdown timeout configurable.
+  , logRecordProcessorForceFlush :: IO ()
+  -- ^ This is a hint to ensure that any tasks associated with LogRecords for which the LogRecordProcessor had already received events prior to the call to ForceFlush SHOULD be completed
+  -- as soon as possible, preferably before returning from this method.
+  --
+  -- In particular, if any LogRecordProcessor has any associated exporter, it SHOULD try to call the exporter’s Export with all LogRecords for which this was not already done and then invoke ForceFlush on it.
+  -- The built-in LogRecordProcessors MUST do so. If a timeout is specified (see below), the LogRecordProcessor MUST prioritize honoring the timeout over finishing all calls. It MAY skip or abort some or all
+  -- Export or ForceFlush calls it has made to achieve this goal.
+  --
+  -- ForceFlush SHOULD provide a way to let the caller know whether it succeeded, failed or timed out.
+  --
+  -- ForceFlush SHOULD only be called in cases where it is absolutely necessary, such as when using some FaaS providers that may suspend the process after an invocation, but before the LogRecordProcessor exports the emitted LogRecords.
+  --
+  -- ForceFlush SHOULD complete or abort within some timeout. ForceFlush can be implemented as a blocking API or an asynchronous API which notifies the caller via a callback or an event. OpenTelemetry SDK authors
+  -- can decide if they want to make the flush timeout configurable.
+  }
+
+
 -- | @Logger@s can be created from @LoggerProvider@s
-data LoggerProvider = LoggerProvider
-  { loggerProviderResource :: MaterializedResources
+data LoggerProvider body = LoggerProvider
+  { loggerProviderProcessors :: Vector (LogRecordProcessor body)
+  , loggerProviderResource :: MaterializedResources
   -- ^ Describes the source of the log, aka resource. Multiple occurrences of events coming from the same event source can happen across time and they all have the same value of Resource.
   -- Can contain for example information about the application that emits the record or about the infrastructure where the application runs. Data formats that represent this data model
   -- may be designed in a manner that allows the Resource field to be recorded only once per batch of log records that come from the same source. SHOULD follow OpenTelemetry semantic conventions for Resources.
   -- This field is optional.
   , loggerProviderAttributeLimits :: AttributeLimits
   }
-  deriving (Show, Eq)
 
 
 {- | @LogRecords@ can be created from @Loggers@. @Logger@s are uniquely identified by the @libraryName@, @libraryVersion@, @schemaUrl@ fields of @InstrumentationLibrary@.
 Creating two @Logger@s with the same identity but different @libraryAttributes@ is a user error.
 -}
-data Logger = Logger
+data Logger body = Logger
   { loggerInstrumentationScope :: InstrumentationLibrary
   -- ^ Details about the library that the @Logger@ instruments.
-  , loggerProvider :: LoggerProvider
+  , loggerProvider :: LoggerProvider body
   -- ^ The @LoggerProvider@ that created this @Logger@. All configuration for the @Logger@ is contained in the @LoggerProvider@.
   }
 
@@ -55,10 +91,10 @@ data Logger = Logger
 Existing log formats can be unambiguously mapped to this data type. Reverse mapping from this data type is also possible to the extent that the target log format has equivalent capabilities.
 Uses an IORef under the hood to allow mutability.
 -}
-data LogRecord a = LogRecord Logger (IORef (ImmutableLogRecord a))
+data LogRecord body = LogRecord (Logger body) (IORef (ImmutableLogRecord body))
 
 
-mkLogRecord :: Logger -> ImmutableLogRecord body -> IO (LogRecord body)
+mkLogRecord :: Logger body -> ImmutableLogRecord body -> IO (LogRecord body)
 mkLogRecord l = fmap (LogRecord l) . newIORef
 
 

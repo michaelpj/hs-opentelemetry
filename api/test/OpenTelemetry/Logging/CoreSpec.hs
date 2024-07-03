@@ -7,6 +7,7 @@ import qualified Data.HashMap.Strict as H
 import Data.IORef
 import qualified OpenTelemetry.Attributes as A
 import OpenTelemetry.Internal.Logging.Types
+import OpenTelemetry.Internal.Logging.Types (LoggerProvider (loggerProviderProcessors))
 import qualified OpenTelemetry.LogAttributes as LA
 import OpenTelemetry.Logging.Core
 import OpenTelemetry.Resource
@@ -14,16 +15,24 @@ import OpenTelemetry.Resource.OperatingSystem
 import Test.Hspec
 
 
+newtype TestLogRecordProcessor body = TestLogRecordProcessor (LogRecordProcessor body)
+
+
+instance Show (TestLogRecordProcessor body) where
+  show _ = "LogRecordProcessor {..}"
+
+
 spec :: Spec
 spec = describe "Core" $ do
   describe "The global logger provider" $ do
     it "Returns a no-op LoggerProvider when not initialized" $ do
       LoggerProvider {..} <- getGlobalLoggerProvider
+      fmap TestLogRecordProcessor loggerProviderProcessors `shouldSatisfy` null
       loggerProviderResource `shouldBe` emptyMaterializedResources
       loggerProviderAttributeLimits `shouldBe` LA.defaultAttributeLimits
     it "Allows a LoggerProvider to be set and returns that with subsequent calls to getGlobalLoggerProvider" $ do
       let lp =
-            createLoggerProvider $
+            createLoggerProvider [] $
               LoggerProviderOptions
                 { loggerProviderOptionsResource =
                     materializeResources $
@@ -44,7 +53,9 @@ spec = describe "Core" $ do
       setGlobalLoggerProvider lp
 
       glp <- getGlobalLoggerProvider
-      glp `shouldBe` lp
+      fmap TestLogRecordProcessor (loggerProviderProcessors glp) `shouldSatisfy` null
+      loggerProviderResource glp `shouldBe` loggerProviderResource lp
+      loggerProviderAttributeLimits glp `shouldBe` loggerProviderAttributeLimits lp
   describe "addAttribute" $ do
     it "works" $ do
       lp <- getGlobalLoggerProvider
