@@ -5,8 +5,10 @@ module OpenTelemetry.Internal.Common.Types (
   InstrumentationLibrary (..),
   ShutdownResult (..),
   FlushResult (..),
+  ExportResult (..),
 ) where
 
+import Control.Exception (SomeException)
 import Data.Hashable (Hashable)
 import Data.String (IsString (fromString))
 import Data.Text (Text)
@@ -68,7 +70,7 @@ instance IsString InstrumentationLibrary where
 data ShutdownResult = ShutdownSuccess | ShutdownFailure | ShutdownTimeout
 
 
--- | The outcome of a call to @OpenTelemetry.Trace.forceFlush@ or @OpenTelemetry.Logging.forceFlush@
+-- | The outcome of a call to @OpenTelemetry.Trace.forceFlush@ or @OpenTelemetry.Logs.forceFlush@
 data FlushResult
   = -- | One or more spans or @LogRecord@s did not export from all associated exporters
     -- within the alotted timeframe.
@@ -79,3 +81,8 @@ data FlushResult
     -- unexported spans or @LogRecord@s.
     FlushError
   deriving (Show)
+
+
+data ExportResult
+  = Success
+  | Failure (Maybe SomeException)
