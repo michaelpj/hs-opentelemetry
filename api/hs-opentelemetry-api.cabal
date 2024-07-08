@@ -38,6 +38,7 @@ library
       OpenTelemetry.Internal.Logs.Types
       OpenTelemetry.Internal.Trace.Id
       OpenTelemetry.LogAttributes
+      OpenTelemetry.LogRecordExporter
       OpenTelemetry.LogRecordProcessor
       OpenTelemetry.Logs.Core
       OpenTelemetry.Propagator
