@@ -101,6 +101,7 @@ createLoggerProvider ps LoggerProviderOptions {..} =
 
 
 -- | Logging is no-op when using this @LoggerProvider@ because it has no processors and empty options.
+noOpLoggerProvider :: LoggerProvider body
 noOpLoggerProvider = createLoggerProvider [] emptyLoggerProviderOptions
 
 
