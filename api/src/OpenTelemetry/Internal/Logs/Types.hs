@@ -27,7 +27,7 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import OpenTelemetry.Common (Timestamp, TraceFlags)
 import OpenTelemetry.Context.Types (Context)
-import OpenTelemetry.Internal.Common.Types (ExportResult, InstrumentationLibrary, ShutdownResult)
+import OpenTelemetry.Internal.Common.Types
 import OpenTelemetry.Internal.Trace.Id (SpanId, TraceId)
 import OpenTelemetry.LogAttributes
 import OpenTelemetry.Resource (MaterializedResources)
@@ -58,7 +58,7 @@ data LogRecordExporter body = LogRecordExporter
   -- Result:
   -- Success - The batch has been successfully exported. For protocol exporters this typically means that the data is sent over the wire and delivered to the destination server.
   -- Failure - exporting failed. The batch must be dropped. For example, this can happen when the batch contains bad data and cannot be serialized.
-  , logRecordExporterForceFlush :: IO ()
+  , logRecordExporterForceFlush :: IO FlushResult
   -- ^ This is a hint to ensure that the export of any ReadableLogRecords the exporter has received prior to the call to ForceFlush SHOULD
   -- be completed as soon as possible, preferably before returning from this method.
   --
@@ -69,7 +69,7 @@ data LogRecordExporter body = LogRecordExporter
   --
   -- ForceFlush SHOULD complete or abort within some timeout. ForceFlush can be implemented as a blocking API or an asynchronous API which
   -- notifies the caller via a callback or an event. OpenTelemetry SDK authors MAY decide if they want to make the flush timeout configurable.
-  , logRecordExporterShutdown :: IO ()
+  , logRecordExporterShutdown :: IO ShutdownResult
   -- ^
   -- Shuts down the exporter. Called when SDK is shut down. This is an opportunity for exporter to do any cleanup required.
   --
@@ -111,7 +111,7 @@ data LogRecordProcessor body = LogRecordProcessor
   -- ^ Called when a LogRecord is emitted. This method is called synchronously on the thread that emitted the LogRecord, therefore it SHOULD NOT block or throw exceptions.
   --
   -- A LogRecordProcessor may freely modify logRecord for the duration of the OnEmit call. If logRecord is needed after OnEmit returns (i.e. for asynchronous processing) only reads are permitted.
-  , logRecordProcessorShutdown :: IO (Async ShutdownResult)
+  , logRecordProcessorShutdown :: IO ShutdownResult
   -- ^ Shuts down the processor. Called when SDK is shut down. This is an opportunity for processor to do any cleanup required.
   --
   -- Shutdown SHOULD be called only once for each LogRecordProcessor instance. After the call to Shutdown, subsequent calls to OnEmit are not allowed. SDKs SHOULD ignore these calls gracefully, if possible.
@@ -122,7 +122,7 @@ data LogRecordProcessor body = LogRecordProcessor
   --
   -- Shutdown SHOULD complete or abort within some timeout. Shutdown can be implemented as a blocking API or an asynchronous API which notifies the caller via a callback or an event.
   -- OpenTelemetry SDK authors can decide if they want to make the shutdown timeout configurable.
-  , logRecordProcessorForceFlush :: IO ()
+  , logRecordProcessorForceFlush :: IO FlushResult
   -- ^ This is a hint to ensure that any tasks associated with LogRecords for which the LogRecordProcessor had already received events prior to the call to ForceFlush SHOULD be completed
   -- as soon as possible, preferably before returning from this method.
   --

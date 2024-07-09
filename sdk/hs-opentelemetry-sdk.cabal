@@ -29,6 +29,7 @@ source-repository head
 
 library
   exposed-modules:
+      OpenTelemetry.LogRecordProcessor.Simple
       OpenTelemetry.Resource.Host.Detector
       OpenTelemetry.Resource.OperatingSystem.Detector
       OpenTelemetry.Resource.Process.Detector
@@ -97,6 +98,7 @@ test-suite hs-opentelemetry-sdk-test
   other-modules:
       OpenTelemetry.BaggageSpec
       OpenTelemetry.ContextSpec
+      OpenTelemetry.LogRecordProcessorSpec
       OpenTelemetry.ResourceSpec
       OpenTelemetry.TraceSpec
       Paths_hs_opentelemetry_sdk
