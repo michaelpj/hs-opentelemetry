@@ -1,10 +1,13 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module OpenTelemetry.LogRecordProcessorSpec where
 
 import Data.IORef
 import qualified Data.Vector as V
 import OpenTelemetry.Internal.Common.Types
+import OpenTelemetry.LogRecordExporter
+import OpenTelemetry.LogRecordProcessor.Simple
 import OpenTelemetry.Logs.Core
 import Test.Hspec
 
@@ -43,9 +46,12 @@ spec = describe "LogRecordProcessor" $ do
   describe "Simple Processor" $ do
     it "Sends LogRecords to the Exporter" $ do
       (numExportsRef, testExporter) <- getTestExporter
+      processor <- simpleProcessor testExporter
 
-      let lp = createLoggerProvider [testExporter] emptyLoggerProviderOptions
-          l = makeLogger lp
+      let lp = createLoggerProvider [processor] emptyLoggerProviderOptions
+          l = makeLogger lp "Test Library"
+
+      emitLogRecord l (emptyLogRecordArguments "something")
 
       pending
 
