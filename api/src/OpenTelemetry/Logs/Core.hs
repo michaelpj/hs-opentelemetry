@@ -38,8 +38,8 @@ module OpenTelemetry.Logs.Core (
 
 import Control.Applicative
 import Control.Concurrent.Async
-import Control.Monad
 import Control.Exception
+import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 import Data.Coerce
