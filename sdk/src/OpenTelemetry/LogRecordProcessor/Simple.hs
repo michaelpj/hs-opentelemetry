@@ -10,7 +10,6 @@ import Control.Concurrent.Async (async, cancel)
 import Control.Concurrent.Chan.Unagi
 import Control.Exception
 import Control.Monad (forever)
-import qualified Data.HashMap.Strict as H
 import qualified Data.Vector as V
 import OpenTelemetry.Internal.Common.Types
 import OpenTelemetry.Internal.Logs.Types
@@ -26,7 +25,7 @@ simpleProcessor LogRecordExporter {..} = do
     bracketOnError
       (readChan outChan)
       (writeChan inChan)
-      exportSingleLogRecord
+      (logRecordExporterExport . V.singleton)
 
   let logRecordProcessorForceFlush =
         ( do
@@ -60,7 +59,5 @@ simpleProcessor LogRecordExporter {..} = do
       case mlr of
         Nothing -> pure acc
         Just lr -> do
-          res <- exportSingleLogRecord lr
+          res <- logRecordExporterExport $ V.singleton lr
           forceFlushOutChan outChan (res : acc)
-
-    exportSingleLogRecord = logRecordExporterExport . (H.singleton <$> readLogRecordInstrumentationScope <*> V.singleton)
