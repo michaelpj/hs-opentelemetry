@@ -38,7 +38,7 @@ import OpenTelemetry.Resource (MaterializedResources)
 The goal of the interface is to minimize burden of implementation for protocol-dependent telemetry exporters. The protocol exporter is expected to be primarily a simple telemetry data encoder and transmitter.
 -}
 data LogRecordExporter body = LogRecordExporter
-  { logRecordExporterExport :: HashMap InstrumentationLibrary (Vector (LogRecord body)) -> IO ExportResult -- TODO: This should be ReadableLogRecord instead of LogRecord
+  { logRecordExporterExport :: Vector (LogRecord body) -> IO ExportResult -- TODO: This should be ReadableLogRecord instead of LogRecord
 
   -- ^ Exports a batch of ReadableLogRecords. Protocol exporters that will implement this function are typically expected to serialize
   -- and transmit the data to the destination.
