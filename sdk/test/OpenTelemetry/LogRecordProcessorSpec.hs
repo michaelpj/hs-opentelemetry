@@ -109,6 +109,7 @@ spec = describe "LogRecordProcessor" $ do
 
       numExports <- readIORef numExportsRef
       numExports `shouldBe` 3
+
       exportRes <- logRecordExporterExport testExporter H.empty
       exportRes `shouldSatisfy` \case
         Success -> False

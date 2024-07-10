@@ -23,7 +23,7 @@ simpleProcessor :: LogRecordExporter body -> IO (LogRecordProcessor body)
 simpleProcessor LogRecordExporter {..} = do
   (inChan :: InChan (LogRecord body), outChan :: OutChan (LogRecord body)) <- newChan
   exportWorker <- async $ forever $ do
-    bracket
+    bracketOnError
       (readChan outChan)
       (writeChan inChan)
       exportSingleLogRecord
