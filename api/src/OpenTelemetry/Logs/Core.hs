@@ -29,6 +29,7 @@ module OpenTelemetry.Logs.Core (
   addAttribute,
   addAttributes,
   logRecordGetAttributes,
+  emptyLogRecordArguments,
 
   -- * Internal logging operations
   logDroppedAttributes,
