@@ -37,7 +37,7 @@ module OpenTelemetry.Logging.Core (
 
 import Control.Applicative
 import Control.Concurrent.Async
-import Control.Monad (void, when)
+import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 import Data.Coerce
@@ -170,7 +170,7 @@ makeLogger
   -> InstrumentationLibrary
   -- ^ The library that the @Logger@ instruments. This uniquely identifies the @Logger@.
   -> Logger body
-makeLogger loggerProvider loggerInstrumentationScope = Logger {..}
+makeLogger loggerLoggerProvider loggerInstrumentationScope = Logger {..}
 
 
 createImmutableLogRecord
@@ -233,9 +233,12 @@ emitOTelLogRecord attrs severity body = do
       }
 
 
-{- | Emits a LogRecord with properties specified by the passed in Logger and LogRecordArguments.
+{- | Emits a @LogRecord@ with properties specified by the passed in Logger and LogRecordArguments.
 If observedTimestamp is not set in LogRecordArguments, it will default to the current timestamp.
 If context is not specified in LogRecordArguments it will default to the current context.
+
+The emitted @LogRecord@ will be passed to any @LogRecordProcessor@s registered on the @LoggerProvider@
+that created the @Logger@.
 -}
 emitLogRecord
   :: (MonadIO m)
@@ -243,8 +246,15 @@ emitLogRecord
   -> LogRecordArguments body
   -> m (LogRecord body)
 emitLogRecord l args = do
-  ilr <- createImmutableLogRecord (loggerProviderAttributeLimits $ loggerProvider l) args
-  liftIO $ mkLogRecord l ilr
+  let LoggerProvider {loggerProviderProcessors, loggerProviderAttributeLimits} = loggerLoggerProvider l
+
+  ilr <- createImmutableLogRecord loggerProviderAttributeLimits args
+  lr <- liftIO $ mkLogRecord l ilr
+
+  ctxt <- getContext
+  mapM_ (\processor -> liftIO $ logRecordProcessorOnEmit processor lr ctxt) loggerProviderProcessors
+
+  pure lr
 
 
 {- | Add an attribute to a @LogRecord@.

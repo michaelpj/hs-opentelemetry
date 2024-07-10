@@ -82,7 +82,7 @@ Creating two @Logger@s with the same identity but different @libraryAttributes@ 
 data Logger body = Logger
   { loggerInstrumentationScope :: InstrumentationLibrary
   -- ^ Details about the library that the @Logger@ instruments.
-  , loggerProvider :: LoggerProvider body
+  , loggerLoggerProvider :: LoggerProvider body
   -- ^ The @LoggerProvider@ that created this @Logger@. All configuration for the @Logger@ is contained in the @LoggerProvider@.
   }
 
@@ -149,11 +149,11 @@ class (ReadableLogRecord r) => ReadWriteLogRecord r where
 instance ReadableLogRecord LogRecord where
   readLogRecord (LogRecord _ ref) = readIORef ref
   readLogRecordInstrumentationScope (LogRecord (Logger {loggerInstrumentationScope}) _) = loggerInstrumentationScope
-  readLogRecordResource (LogRecord Logger {loggerProvider = LoggerProvider {loggerProviderResource}} _) = loggerProviderResource
+  readLogRecordResource (LogRecord Logger {loggerLoggerProvider = LoggerProvider {loggerProviderResource}} _) = loggerProviderResource
 
 
 instance ReadWriteLogRecord LogRecord where
-  readLogRecordAttributeLimits (LogRecord Logger {loggerProvider = LoggerProvider {loggerProviderAttributeLimits}} _) = loggerProviderAttributeLimits
+  readLogRecordAttributeLimits (LogRecord Logger {loggerLoggerProvider = LoggerProvider {loggerProviderAttributeLimits}} _) = loggerProviderAttributeLimits
   modifyLogRecord (LogRecord _ ref) = modifyIORef ref
   atomicModifyLogRecord (LogRecord _ ref) = atomicModifyIORef ref
 
