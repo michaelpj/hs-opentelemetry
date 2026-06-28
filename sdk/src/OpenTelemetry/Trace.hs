@@ -126,6 +126,8 @@ module OpenTelemetry.Trace (
   addAttributes,
   recordException,
   recordSomeException,
+  recordExceptionWithContext,
+  ExceptionWithContext,
   setStatus,
   SpanStatus (..),
   NewEvent (..),
